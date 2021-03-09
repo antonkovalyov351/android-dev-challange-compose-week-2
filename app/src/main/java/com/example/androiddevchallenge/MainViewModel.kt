@@ -7,13 +7,10 @@ import com.example.androiddevchallenge.util.minutesToSeconds
 import com.example.androiddevchallenge.util.secondsToHours
 import com.example.androiddevchallenge.util.secondsToMinutes
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import timber.log.Timber
 
 class MainViewModel : ViewModel() {
 
@@ -24,6 +21,9 @@ class MainViewModel : ViewModel() {
 
     private val activeMutable = MutableStateFlow(false)
     val active: StateFlow<Boolean> = activeMutable
+
+    private val playSoundEventChannel = Channel<Unit>(Channel.BUFFERED)
+    val playSoundEvent = playSoundEventChannel.receiveAsFlow()
 
     fun hoursChanged(value: Int) {
         val newHours = value.toLong()
@@ -54,20 +54,17 @@ class MainViewModel : ViewModel() {
     }
 
     private fun stop() {
-        Timber.d("testiq: stop")
         countdownJob?.cancel()
-        activeMutable.value = false 
+        activeMutable.value = false
     }
 
     private fun start() {
-        Timber.d("testiq: start")
         countdownJob = viewModelScope.launch {
             interval().collect {
-                Timber.d("testiq: tick")
                 totalSecondsMutable.value--
                 if (totalSecondsMutable.value == 0L) {
                     stop()
-                    // TODO[kovalyov] (09-Mar-2021): Play sound
+                    playSoundEventChannel.send(Unit)
                 }
             }
         }

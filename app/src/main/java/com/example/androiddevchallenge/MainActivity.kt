@@ -15,6 +15,8 @@
  */
 package com.example.androiddevchallenge
 
+import android.media.MediaPlayer
+import android.media.RingtoneManager
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -26,14 +28,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.lifecycle.lifecycleScope
 import com.example.androiddevchallenge.ui.CountDownActionsRow
 import com.example.androiddevchallenge.ui.CountDownInputRow
 import com.example.androiddevchallenge.ui.theme.MyTheme
+import kotlinx.coroutines.flow.collect
 import timber.log.Timber
 
 class MainActivity : AppCompatActivity() {
 
     private val viewModel: MainViewModel by viewModels()
+    private lateinit var alarmPlayer: MediaPlayer
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,10 +47,30 @@ class MainActivity : AppCompatActivity() {
                 MyApp(viewModel)
             }
         }
+        alarmPlayer = MediaPlayer.create(applicationContext, getAlarmUri())
+
+        lifecycleScope.launchWhenCreated {
+            viewModel.playSoundEvent.collect {
+                alarmPlayer.start()
+            }
+        }
     }
+
+    override fun onStop() {
+        super.onStop()
+        if (alarmPlayer.isPlaying) {
+            alarmPlayer.stop()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        alarmPlayer.release()
+    }
+
+    private fun getAlarmUri() = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
 }
 
-// Start building your app here!
 @Composable
 fun MyApp(viewModel: MainViewModel) {
     Surface(color = MaterialTheme.colors.background) {
@@ -70,20 +95,3 @@ fun MyApp(viewModel: MainViewModel) {
         }
     }
 }
-
-//@Preview("Light Theme", widthDp = 360, heightDp = 640)
-//@Composable
-//fun LightPreview() {
-//    MyTheme {
-//        val vm = viewModel()
-//        MyApp(vm)
-//    }
-//}
-
-//@Preview("Dark Theme", widthDp = 360, heightDp = 640)
-//@Composable
-//fun DarkPreview() {
-//    MyTheme(darkTheme = true) {
-//        MyApp()
-//    }
-//}
