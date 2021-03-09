@@ -21,13 +21,16 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import com.example.androiddevchallenge.model.CountdownState
 import com.example.androiddevchallenge.ui.CountDownActionsRow
@@ -90,7 +93,9 @@ fun MyApp(viewModel: MainViewModel) {
         val countdownState by viewModel.state.collectAsState()
         val canStart = totalSeconds != 0L || countdownState == CountdownState.ALARM
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxSize()
         ) {
             CountDownInputRow(
                 active = countdownState != CountdownState.IDLE,
