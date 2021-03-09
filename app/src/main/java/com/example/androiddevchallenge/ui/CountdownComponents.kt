@@ -22,7 +22,9 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -115,17 +117,22 @@ fun CountDownInputRow(
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun CountDownActionsRow(
     enabled: Boolean,
     state: CountdownState,
     startStopAction: () -> Unit,
 ) {
+    val keyboardController = LocalSoftwareKeyboardController.current
     Row(
         modifier = Modifier.padding(16.dp),
     ) {
         Button(
-            onClick = startStopAction,
+            onClick = {
+                keyboardController?.hideSoftwareKeyboard()
+                startStopAction()
+            },
             enabled = enabled,
         ) {
             Text(
