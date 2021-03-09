@@ -29,16 +29,16 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.lifecycle.lifecycleScope
+import com.example.androiddevchallenge.model.CountdownState
 import com.example.androiddevchallenge.ui.CountDownActionsRow
 import com.example.androiddevchallenge.ui.CountDownInputRow
 import com.example.androiddevchallenge.ui.theme.MyTheme
 import kotlinx.coroutines.flow.collect
-import timber.log.Timber
 
 class MainActivity : AppCompatActivity() {
 
     private val viewModel: MainViewModel by viewModels()
-    private lateinit var alarmPlayer: MediaPlayer
+    private var alarmPlayer: MediaPlayer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,41 +47,53 @@ class MainActivity : AppCompatActivity() {
                 MyApp(viewModel)
             }
         }
-        alarmPlayer = MediaPlayer.create(applicationContext, getAlarmUri())
 
         lifecycleScope.launchWhenCreated {
-            viewModel.playSoundEvent.collect {
-                alarmPlayer.start()
+            viewModel.eventFlow.collect {
+                handleEvent(it)
             }
         }
     }
 
     override fun onStop() {
         super.onStop()
-        if (alarmPlayer.isPlaying) {
-            alarmPlayer.stop()
+        if (alarmPlayer?.isPlaying == true) {
+            alarmPlayer?.stop()
         }
+        viewModel.stopAlarm()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        alarmPlayer.release()
+        alarmPlayer?.release()
+    }
+
+    private fun playSound() {
+        alarmPlayer = MediaPlayer.create(applicationContext, getAlarmUri())
+        alarmPlayer?.start()
     }
 
     private fun getAlarmUri() = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+
+    private fun handleEvent(event: MainViewModel.Event) {
+        when (event) {
+            MainViewModel.Event.PlaySound -> playSound()
+            MainViewModel.Event.StopSound -> alarmPlayer?.stop()
+        }
+    }
 }
 
 @Composable
 fun MyApp(viewModel: MainViewModel) {
     Surface(color = MaterialTheme.colors.background) {
         val totalSeconds by viewModel.totalSeconds.collectAsState()
-        val active by viewModel.active.collectAsState()
-        val canStart = totalSeconds != 0L
+        val countdownState by viewModel.state.collectAsState()
+        val canStart = totalSeconds != 0L || countdownState == CountdownState.ALARM
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CountDownInputRow(
-                active = active,
+                active = countdownState != CountdownState.IDLE,
                 totalSeconds = totalSeconds,
                 onHoursChange = viewModel::hoursChanged,
                 onMinutesChange = viewModel::minutesChanged,
@@ -89,7 +101,7 @@ fun MyApp(viewModel: MainViewModel) {
             )
             CountDownActionsRow(
                 enabled = canStart,
-                active = active,
+                state = countdownState,
                 startStopAction = viewModel::startOrStop
             )
         }

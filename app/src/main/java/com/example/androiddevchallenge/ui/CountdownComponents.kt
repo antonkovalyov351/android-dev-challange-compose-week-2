@@ -28,6 +28,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.androiddevchallenge.model.CountdownState
 import com.example.androiddevchallenge.ui.theme.MyTheme
 
 private const val MAX_HOURS = 99
@@ -117,7 +118,7 @@ fun CountDownInputRow(
 @Composable
 fun CountDownActionsRow(
     enabled: Boolean,
-    active: Boolean,
+    state: CountdownState,
     startStopAction: () -> Unit,
 ) {
     Row(
@@ -127,7 +128,13 @@ fun CountDownActionsRow(
             onClick = startStopAction,
             enabled = enabled,
         ) {
-            Text(text = if (active) "Cancel" else "Start")
+            Text(
+                text = when (state) {
+                    CountdownState.IDLE -> "Start"
+                    CountdownState.TICKING -> "Cancel"
+                    CountdownState.ALARM -> "Turn Off"
+                }
+            )
         }
     }
 }
@@ -158,6 +165,6 @@ fun CountDownInputRowPreview() {
 @Composable
 fun CountDownActionsRowPreview() {
     MyTheme {
-        CountDownActionsRow(enabled = true, active = true, {})
+        CountDownActionsRow(enabled = true, state = CountdownState.ALARM, {})
     }
 }

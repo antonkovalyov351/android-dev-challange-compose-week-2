@@ -17,6 +17,7 @@ package com.example.androiddevchallenge
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.androiddevchallenge.model.CountdownState
 import com.example.androiddevchallenge.util.hoursToSeconds
 import com.example.androiddevchallenge.util.minutesToSeconds
 import com.example.androiddevchallenge.util.secondsToHours
@@ -34,11 +35,11 @@ class MainViewModel : ViewModel() {
     private val totalSecondsMutable = MutableStateFlow(0L)
     val totalSeconds: StateFlow<Long> = totalSecondsMutable
 
-    private val activeMutable = MutableStateFlow(false)
-    val active: StateFlow<Boolean> = activeMutable
+    private val stateMutable = MutableStateFlow(CountdownState.IDLE)
+    val state: StateFlow<CountdownState> = stateMutable
 
-    private val playSoundEventChannel = Channel<Unit>(Channel.BUFFERED)
-    val playSoundEvent = playSoundEventChannel.receiveAsFlow()
+    private val eventChannel = Channel<Event>(Channel.BUFFERED)
+    val eventFlow = eventChannel.receiveAsFlow()
 
     fun hoursChanged(value: Int) {
         val newHours = value.toLong()
@@ -61,16 +62,23 @@ class MainViewModel : ViewModel() {
     }
 
     fun startOrStop() {
-        if (activeMutable.value) {
-            stop()
-        } else {
-            start()
+        when (state.value) {
+            CountdownState.IDLE -> start()
+            CountdownState.TICKING -> stop()
+            CountdownState.ALARM -> {
+                eventChannel.offer(Event.StopSound)
+                stateMutable.value = CountdownState.IDLE
+            }
         }
+    }
+
+    fun stopAlarm() {
+        stateMutable.value = CountdownState.IDLE
     }
 
     private fun stop() {
         countdownJob?.cancel()
-        activeMutable.value = false
+        stateMutable.value = CountdownState.IDLE
     }
 
     private fun start() {
@@ -78,12 +86,13 @@ class MainViewModel : ViewModel() {
             interval().collect {
                 totalSecondsMutable.value--
                 if (totalSecondsMutable.value == 0L) {
-                    stop()
-                    playSoundEventChannel.send(Unit)
+                    countdownJob?.cancel()
+                    stateMutable.value = CountdownState.ALARM
+                    eventChannel.send(Event.PlaySound)
                 }
             }
         }
-        activeMutable.value = true
+        stateMutable.value = CountdownState.TICKING
     }
 
     private fun interval() = flow {
@@ -91,5 +100,10 @@ class MainViewModel : ViewModel() {
             delay(1000)
             emit(Unit)
         }
+    }
+
+    sealed class Event {
+        object PlaySound : Event()
+        object StopSound : Event()
     }
 }
